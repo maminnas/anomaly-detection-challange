@@ -3,7 +3,6 @@
 {"event_type":"purchase", "timestamp":"2017-06-13 11:33:02", "id": "3", "amount": "10"}
 {"event_type":"purchase", "timestamp":"2017-06-13 11:33:02", "id": "4", "amount": "10"}
 {"event_type":"purchase", "timestamp":"2017-06-13 11:33:02", "id": "5", "amount": "10"}
-{"event_type":"befriend", "timestamp":"2017-06-13 11:33:01", "id1": "7", "id2": "3"}
 {"event_type":"purchase", "timestamp":"2017-06-13 11:33:02", "id": "7", "amount": "10"}
 {"event_type":"purchase", "timestamp":"2017-06-13 11:33:02", "id": "8", "amount": "10"}
 {"event_type":"purchase", "timestamp":"2017-06-13 11:33:02", "id": "9", "amount": "10"}
