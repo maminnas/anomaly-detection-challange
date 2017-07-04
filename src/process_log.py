@@ -7,14 +7,13 @@ class user(object):
 		self.purchases = []
 		self.friends = set()
 
-	def purchase_size(self):
-		return len(self.purchases)
-
 def read_batch_log(file_loc):
 	users={}
 	D=2
 	T=50
 	for e, line in enumerate(open(file_loc)):
+		if line=='' or line in ' \n\t':
+			continue
 		json_line = json.loads(line)
 		if e==0:
 			D = int(json_line['D']) # need to define them properly (class? global?)
@@ -51,6 +50,8 @@ def read_batch_log(file_loc):
 
 def read_stream_log(stream_log_loc, flagged_loc, users, D, T):
 	for line in open(stream_log_loc):
+		if line=='' or line in ' \n\t':
+			continue
 		json_line = json.loads(line)
 		if json_line["event_type"]=="purchase":
 			try:
@@ -61,7 +62,10 @@ def read_stream_log(stream_log_loc, flagged_loc, users, D, T):
 			sn = find_social_network(users, json_line["id"], D) # TODO: make sure users getting updated not only in this function but globally
 			mean, sd = get_mean_sd(users, sn, T)
 			if sd!=-1 and float(json_line["amount"]) > mean + 3 * sd:
-				s = line[:-1]+', "mean": "'+'%.2f'%(mean)+'", "sd": "'+'%.2f'%(sd)+'"}'
+				ind = -1
+				while line[ind]!='}':
+					ind-=1
+				s = line[:ind]+', "mean": "'+'%.2f'%(mean)+'", "sd": "'+'%.2f'%(sd)+'"}'
 				################## try writing in file faster #################
 				write_output(flagged_loc, s)
 
@@ -133,9 +137,6 @@ def get_mean_sd(users, sn, T=50):
 		sd = sqrt(sum([(i-mean)*(i-mean) for _,_,i in sn_purchase_list])/len(sn_purchase_list))
 		return mean, sd
 	return 0, -1
-		
-	if purchase_amount > mean + 3 * sd:
-		s = '{"event_type":"purchase", "timestamp":"'+tstamp+'", "id": "'+uid+'", "amount": "'+'%.2f'%(amount)+'", "mean": "'+'%.2f'%(mean)+'", "sd": "'+'%.2f'%(sd)+'"}'
 
 def write_output(file_loc, line):
 	with open(file_loc, "a") as f:
@@ -145,15 +146,13 @@ if __name__=='__main__':
 	batch_log_loc = sys.argv[1]
 	stream_log_loc = sys.argv[2]
 	flagged_loc = sys.argv[3]
+	print 'Reading batch logs...'
 	users, D, T = read_batch_log(batch_log_loc)
 	print "D: ", D, "T: ", T
-	print len(users)
+	print 'Number of users: ', len(users)
+	f = open(flagged_loc, 'w')
+	f.close()
+	print 'Empty output file created'
+	print 'Reading stream logs...'
 	users = read_stream_log(stream_log_loc, flagged_loc, users, D, T) # make sure users is getting updated
-	print len(users)
-	# c=0
-	# for i in users:
-	# 	c+=1
-	# 	print users[i].friends
-	# 	print i, find_social_network(users, i, 3)
-	# 	if c==5:
-	# 		break
+	print 'Done!'
