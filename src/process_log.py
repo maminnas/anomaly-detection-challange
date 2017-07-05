@@ -1,5 +1,4 @@
-#!/bin/bash
-
+#!/bin/python
 import json, time, sys
 from math import sqrt
 
