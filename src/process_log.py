@@ -23,7 +23,10 @@ def read_batch_log(file_loc):
 		if line=='' or line in ' \n\t':
 			print 'bad json line --- skipped!'
 			continue
-		json_line = json.loads(line)
+		try:
+			json_line = json.loads(line)
+		except ValueError, err:
+			continue
 		if e==0:
 			D = int(json_line['D']) # need to define them properly (class? global?)
 			T = int(json_line['T']) # need to define them properly (class? global?)
@@ -68,7 +71,10 @@ def read_stream_log(stream_log_loc, flagged_loc, users, D, T):
 	for line in open(stream_log_loc):
 		if line=='' or line in ' \n\t':
 			continue
-		json_line = json.loads(line)
+		try:
+			json_line = json.loads(line)
+		except ValueError, err:
+			continue
 		if json_line["event_type"]=="purchase":
 			try:
 				users[json_line["id"]].purchases+=[(float(json_line["amount"]), json_line["timestamp"], time.time())]
@@ -191,17 +197,20 @@ if __name__=='__main__':
 	""" it sould take 3 arguments
 	python ./src/process_log.py ./log_input/batch_log.json ./log_input/stream_log.json ./log_output/flagged_purchases.json
 	"""
-	
+
 	batch_log_loc = sys.argv[1]
 	stream_log_loc = sys.argv[2]
 	flagged_loc = sys.argv[3]
+
 	print 'Reading batch logs...'
 	users, D, T = read_batch_log(batch_log_loc)
-	print "D: ", D, "T: ", T
+	print "D:", D, "T:", T
 	print 'Number of users: ', len(users)
+	
 	f = open(flagged_loc, 'w')
 	f.close()
 	print 'Empty output file created'
+	
 	print 'Reading stream logs...'
 	users = read_stream_log(stream_log_loc, flagged_loc, users, D, T) # make sure users is getting updated
 	print 'Done!'
