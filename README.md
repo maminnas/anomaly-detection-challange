@@ -22,7 +22,7 @@ Using these two function we can compare the purchase amount with the anomaly equ
 
 # Dependencies
 In this task I used python 2.7 and it's built in packages. There is no need to install additional packages. 
-Used json to convert json objects to python dict easily. Used sys to read arguments of log file names. And time to keep track of chronological order of same timestamps. Used sqrt for calculation of standard deviation.
+Used json to convert json objects to python dict easily. Used sys to read arguments of log file names. And time to keep track of chronological order of same timestamps. Used sqrt for calculation of standard deviation. Also imported PriorityQueue from Queue to make use of heap structure.
 # Run Instructions
 As mentioned in your run file this command will do the process:
 python ./src/process_log.py ./log_input/batch_log.json ./log_input/stream_log.json ./log_output/flagged_purchases.json
