@@ -16,7 +16,7 @@ To find out anomalous purchases two functions were implemented:
 2. get_mean_sd: gathers last T purchases in a social network and returns the mean and standard deviation of them. If the list is less than 2 it provides 0, -1 for mean, sd as invalid.
 
 The first function utilizes a BFS which only explores neighbours of level D and returns the id of users in that social network.
-The second function finds the lates purchase among last purchases of each user in social net and adds it to the list and moves the index. It will try to find latest purchases of the social network in this manner until the size reaches T or the purchase history of each user gets exhausted.
+The second function finds the lates purchase among last purchases of each user in social net and adds it to the list and moves the index. It will try to find latest purchases of the social network in using a heap until the size reaches T or the purchase history of each user gets exhausted.
 
 Using these two function we can compare the purchase amount with the anomaly equiation and if it was greater it is flagged in written in output file right away. So the output data is keep getting appended while reading stream_log.
 

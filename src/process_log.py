@@ -1,6 +1,7 @@
 #!/bin/python
 import json, time, sys
 from math import sqrt
+from Queue import PriorityQueue as pq
 
 class user(object):
 	def __init__(self, uid):
@@ -34,10 +35,12 @@ def read_batch_log(file_loc):
 				# since we have too many users searching keys of dictinary everytime will be time consuming
 				# using try catch will boost our time performance
 				try:
-					users[json_line["id"]].purchases+=[(float(json_line["amount"]), json_line["timestamp"], time.time())]
+					users[json_line["id"]].purchases+=[(float(json_line["amount"]), json_line["timestamp"], int(round(time.time()*10000)))]
 				except:
 					users[json_line["id"]]=user(json_line["id"])
-					users[json_line["id"]].purchases+=[(float(json_line["amount"]), json_line["timestamp"], time.time())]
+					users[json_line["id"]].purchases+=[(float(json_line["amount"]), json_line["timestamp"], int(round(time.time()*10000)))]
+				# print users[json_line["id"]].purchases[-1][-1]
+
 			elif json_line["event_type"]=="befriend":
 				try:
 					users[json_line["id1"]].friends.add(json_line["id2"])
@@ -60,13 +63,13 @@ def read_batch_log(file_loc):
 					pass
 			else:
 				print "Invalid event_type:", json_line["event_type"]
-			
+
 	return users, D, T
 
 def read_stream_log(stream_log_loc, flagged_loc, users, D, T):
 	""" reads stream_log file using current network of users 
 		checks for anomalouse purchases and updates the network and purchase lists"""
-
+	
 	for line in open(stream_log_loc):
 		if line=='' or line in ' \n\t':
 			continue
@@ -76,10 +79,10 @@ def read_stream_log(stream_log_loc, flagged_loc, users, D, T):
 			continue
 		if json_line["event_type"]=="purchase":
 			try:
-				users[json_line["id"]].purchases+=[(float(json_line["amount"]), json_line["timestamp"], time.time())]
+				users[json_line["id"]].purchases+=[(float(json_line["amount"]), json_line["timestamp"], int(round(time.time()*10000)))]
 			except:
 				users[json_line["id"]]=user(json_line["id"])
-				users[json_line["id"]].purchases+=[(float(json_line["amount"]), json_line["timestamp"], time.time())]
+				users[json_line["id"]].purchases+=[(float(json_line["amount"]), json_line["timestamp"], int(round(time.time()*10000)))]
 			
 			# print 'User:', json_line["id"], 'friends', users[json_line["id"]].friends
 			sn = find_social_network(users, json_line["id"], D)
@@ -118,7 +121,7 @@ def read_stream_log(stream_log_loc, flagged_loc, users, D, T):
 				pass
 		else:
 				print "Invalid event_type:", json_line["event_type"]
-			
+	
 	return users
 
 def find_social_network(users, uid, D=2):
@@ -152,26 +155,41 @@ def get_mean_sd(users, sn, T=50):
 	indices = [len(users[i].purchases)-1 for i in sn] 
 	sn_purchase_list = [] # purchase list of social network
 	
+	# using heap will boost performance of comparisons
+	heap = pq(maxsize=len(sn))
+	for i, uid in enumerate(sn):
+		if indices[i]<0: # visited all this user's purchase list
+			continue
+		heap.put((-users[uid].purchases[indices[i]][2], users[uid].purchases[indices[i]][0], uid, i)) # (-time, amount, uid, index)
+
+	while not heap.empty() and len(sn_purchase_list)<T and sum(indices)> -len(sn):
+		t, a, u, i = heap.get() # (-time, amount, uid, index)
+		sn_purchase_list += [(-t, u, a)] # list of tuples (timestamp, user_id, amount)
+		indices[i] -= 1 # update the index of added item
+		if indices[i]>-1:
+			heap.put((-users[u].purchases[indices[i]][2], users[u].purchases[indices[i]][0], u, i))
+
 	# while did not found last T purchases 
 	# and there still exist a purchase in any of the social networks users purchases
-	while len(sn_purchase_list)<T and sum(indices)> -len(sn):
-		last = (0,'',0) # (amount, timestamp, time())
-		last_i = -1
-		for i, uid in enumerate(sn):
-			if indices[i]<0: # visited all this user's purchase list
-				continue
-			# find latest purchase among last purchases of each user in the social net
-			if users[uid].purchases[indices[i]][2]>last[2]: 
-				last = users[uid].purchases[indices[i]]
-				# and track the indices
-				last_uid = uid
-				last_i = i
-		if last_i ==-1: # avoid potential error (if all users' puchase lists were empty)
-			break
-		else:
-			# add last purchased item
-			sn_purchase_list += [(last[1], last_uid, last[0])] # list of tuples (timestamp, user_id, amount)
-			indices[last_i] -= 1 # update the index of added item
+	# while len(sn_purchase_list)<T and sum(indices)> -len(sn):
+	# 	last = (0,'',0) # (amount, timestamp, time())
+	# 	last_i = -1
+	# 	for i, uid in enumerate(sn):
+	# 		if indices[i]<0: # visited all this user's purchase list
+	# 			continue
+	# 		# find latest purchase among last purchases of each user in the social net
+	# 		# print users[uid].purchases[indices[i]][2]
+	# 		if users[uid].purchases[indices[i]][2]>last[2]: 
+	# 			last = users[uid].purchases[indices[i]]
+	# 			# and track the indices
+	# 			last_uid = uid
+	# 			last_i = i
+	# 	if last_i ==-1: # avoid potential error (if all users' puchase lists were empty)
+	# 		break
+	# 	else:
+	# 		# add last purchased item
+	# 		sn_purchase_list += [(last[1], last_uid, last[0])] # list of tuples (timestamp, user_id, amount)
+	# 		indices[last_i] -= 1 # update the index of added item
 
 	if len(sn_purchase_list)>=2:
 		# calculate mean and standard deviation
@@ -203,6 +221,8 @@ if __name__=='__main__':
 
 	print 'Reading batch logs...'
 	users, D, T = read_batch_log(batch_log_loc)
+	s = time.time()
+	D=4
 	print "D:", D, "T:", T
 	print 'Number of users: ', len(users)
 	
@@ -213,3 +233,4 @@ if __name__=='__main__':
 	print 'Reading stream logs...'
 	users = read_stream_log(stream_log_loc, flagged_loc, users, D, T) # make sure users is getting updated
 	print 'Done!'
+	print 'Processing stream_log took', '%.2f'%(time.time()-s)
